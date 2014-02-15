@@ -19,8 +19,9 @@ class MotionDetector
 public:
     MotionDetector(int buffer_depth = 3, double mhi_duration = 0.3,double max_time_delta= 0.2, double min_time_delta = 0.01);
 
+    void update(Mat &img, Mat &dst, int diff_threshold);
 
-    void detect(Mat &in_img, Mat &out_dst, int diff_threshold);
+
 private:
     // various tracking parameters (in seconds)
     const double MHI_DURATION;// = 0.3;
@@ -31,14 +32,21 @@ private:
     const int N;// = 3;
 
     // ring image buffer of size N
-    vector<Mat> buf;//(N);
+    vector<Mat> buffer;//(N);
     int last;// = 0;
 
     // temporary images
     Mat mhi; // MHI
+    Mat silh,silh1;
     Mat orient; // orientation
     Mat mask; // valid orientation mask
     Mat segmask; // motion segmentation map
+
+    vector<Rect> seq;
+
+
+    void resize_matrix(int rows, int cols);
+
 
 };
 
