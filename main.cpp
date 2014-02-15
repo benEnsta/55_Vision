@@ -57,28 +57,32 @@ static void  update_mhi( Mat &img1, Mat& img2, Mat &dst, int diff_threshold )
     double magnitude;
     CvScalar color;
 
-    Mat i1, i2;
+    Mat i1(img1.rows,img1.cols,CV_8UC1), i2(img1.rows,img1.cols,CV_8UC1);
     cvtColor( img1, i1, CV_BGR2GRAY ); // convert frame to grayscale
     cvtColor( img2, i2, CV_BGR2GRAY ); // convert frame to grayscale
 
     absdiff(i1, i2, silh); // get difference between frames
 //    cout << "here absdiff Done  " << idx1 << " " << idx2 << " "  << last << endl;
-    dst = silh;
-//    threshold( silh, silh, diff_threshold, 1, CV_THRESH_BINARY ); // and threshold it
+    silh.zeros(img1.rows,img1.cols,CV_8UC1);
+    threshold( silh, silh, diff_threshold, 1, CV_THRESH_BINARY ); // and threshold it
 //    cout << "here threshold Done" << endl;
-//    dst = silh;
-//    updateMotionHistory( silh, mhi, timestamp, MHI_DURATION ); // update MHI
-//    cout << "here updateMotionHistory Done" << endl;
+//    silh.copyTo(dst);
+
+    cout << silh.type() << " " << CV_8UC1 << " " << mhi.type() << " " << CV_32FC1<<endl;
+
+    updateMotionHistory( silh, mhi, timestamp, MHI_DURATION ); // update MHI
+    cout << "here updateMotionHistory Done" << endl;
+
 
     // convert MHI to blue 8u image
 //    cvCvtScale( mhi, mask, 255./MHI_DURATION,
 //                (MHI_DURATION - timestamp)*255./MHI_DURATION );
-//    mhi.convertTo(mask,CV_8U, 255./MHI_DURATION,
-//                (MHI_DURATION - timestamp)*255./MHI_DURATION );
+    mhi.convertTo(mask,CV_8U, 255./MHI_DURATION,
+                (MHI_DURATION - timestamp)*255./MHI_DURATION );
 //    dst.zeros()
-//    vector<Mat> merge_vect(4,Mat::zeros(mask.rows, mask.cols,CV_8U));
-//    merge_vect[0] = mask;
-//    cv::merge( merge_vect, dst );
+    vector<Mat> merge_vect(4,Mat::zeros(mask.rows, mask.cols,CV_8U));
+    merge_vect[0] = mask;
+    cv::merge( merge_vect, dst );
 
     // calculate motion gradient orientation and valid orientation mask
 //    calcMotionGradient( mhi, mask, orient, MAX_TIME_DELTA, MIN_TIME_DELTA, 3 );
@@ -172,6 +176,8 @@ int main(int argc, char** argv)
     cap >> image_prev;
 
 
+    mhi = Mat::zeros(image_prev.rows,image_prev.cols, CV_32FC1);
+    cout << "Init  " << mhi.type() << " " << CV_32FC1 << " (" << mhi.rows << " , " << mhi.cols << ") " << endl;
     for(;;)
     {
         cap >> image;
@@ -180,12 +186,12 @@ int main(int argc, char** argv)
 //        idx2 = (last + 1) % N; // index of (last - (N-1))th frame
 //        last = idx2;
         motion = image;
-//        update_mhi( image_prev, image , motion, 30 );
+        update_mhi( image_prev, image , motion, 30 );
 
-        Mat i1, i2;
-        cvtColor( image_prev, i1, CV_BGR2GRAY ); // convert frame to grayscale
-        cvtColor( image, i2, CV_BGR2GRAY ); // convert frame to grayscale
-        absdiff(i1,i2,motion);
+//        Mat i1, i2;
+//        cvtColor( image_prev, i1, CV_BGR2GRAY ); // convert frame to grayscale
+//        cvtColor( image, i2, CV_BGR2GRAY ); // convert frame to grayscale
+//        absdiff(i1,i2,motion);
         imshow("Motion", motion );
         imshow( "Image", image );
 
