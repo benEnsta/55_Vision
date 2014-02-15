@@ -44,7 +44,7 @@ bool init = false;
 //  img - input video frame
 //  dst - resultant motion picture
 //  args - optional parameters
-static void  update_mhi( Mat &img1, Mat& img2, Mat &dst, int diff_threshold )
+static void  update_mhi( Mat &img1, Mat& img2, Mat &dst, Mat &output, int diff_threshold )
 {
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
 //    CvSize size = cvSize(img->width,img->height); // get current frame size
@@ -85,67 +85,23 @@ static void  update_mhi( Mat &img1, Mat& img2, Mat &dst, int diff_threshold )
     cv::merge( merge_vect, dst );
 
     // calculate motion gradient orientation and valid orientation mask
-//    calcMotionGradient( mhi, mask, orient, MAX_TIME_DELTA, MIN_TIME_DELTA, 3 );
+    calcMotionGradient( mhi, mask, orient, MAX_TIME_DELTA, MIN_TIME_DELTA, 3 );
 
 
     // segment motion: get sequence of motion components
     // segmask is marked motion components map. It is not used further
-//    segmentMotion( mhi, segmask, storage, timestamp, MAX_TIME_DELTA );
+    segmentMotion( mhi, segmask, storage, timestamp, MAX_TIME_DELTA );
+
 
     // iterate through the motion components,
     // One more iteration (i == -1) corresponds to the whole image (global motion)
-//    for( i = -1; i < seq->total; i++ ) {
 
-//        if( i < 0 ) { // case of the whole image
-//            comp_rect = cvRect( 0, 0, size.width, size.height );
-//            color = CV_RGB(255,255,255);
-//            magnitude = 100;
-//        }
-//        else { // i-th motion component
-//            comp_rect = ((CvConnectedComp*)cvGetSeqElem( seq, i ))->rect;
-//            if( comp_rect.width + comp_rect.height < 100 ) // reject very small components
-//                continue;
-//            color = CV_RGB(255,0,0);
-//            magnitude = 30;
-//        }
+    for( uint i = 0; i < storage.size(); i++ ) {
 
-        // select component ROI
-        //        cvSetImageROI( silh, comp_rect );
-        //        cvSetImageROI( mhi, comp_rect );
-        //        cvSetImageROI( orient, comp_rect );
-        //        cvSetImageROI( mask, comp_rect );
-
-
-        // calculate orientation
-        //        angle = cvCalcGlobalOrientation( orient, mask, mhi, timestamp, MHI_DURATION);
-        //        angle = 360.0 - angle;  // adjust for images with top-left origin
-
-        //        count = cvNorm( silh, 0, CV_L1, 0 ); // calculate number of points within silhouette ROI
-
-        //        cvResetImageROI( mhi );
-        //        cvResetImageROI( orient );
-        //        cvResetImageROI( mask );
-        //        cvResetImageROI( silh );
-
-//        cvRectangle(img,cvPoint(comp_rect.x,comp_rect.y),
-//                    cvPoint(comp_rect.x+comp_rect.width,comp_rect.y+ comp_rect.height),cvScalar(255,0,0));
-
-//        // check for the case of little motion
-//        if( count < comp_rect.width*comp_rect.height * 0.05 )
-//            continue;
-
-//        cvRectangle(img,cvPoint(comp_rect.x,comp_rect.y),
-//                    cvPoint(comp_rect.x+comp_rect.width,comp_rect.y+ comp_rect.height),cvScalar(255,0,0));
-
-
-        // draw a clock with arrow indicating the direction
-        //        center = cvPoint( (comp_rect.x + comp_rect.width/2),
-        //                          (comp_rect.y + comp_rect.height/2) );
-
-        //        cvCircle( dst, center, cvRound(magnitude*1.2), color, 3, CV_AA, 0 );
-        //        cvLine( dst, center, cvPoint( cvRound( center.x + magnitude*cos(angle*CV_PI/180)),
-        //                cvRound( center.y - magnitude*sin(angle*CV_PI/180))), color, 3, CV_AA, 0 );
-//    }
+        if( i > 0 ){ // i-th motion component
+            cv::rectangle(output,storage[i],cvScalar(255,0,0));
+        }
+    }
 }
 
 
@@ -154,7 +110,7 @@ int main(int argc, char** argv)
     // ring image buffer
 //    vector<Mat> buf(N);
 //    int last = 0, idx1, idx2;
-    Mat motion, image, image_prev;
+    Mat motion, image, image_prev, output;
     vector<Mat> buf(4);
     VideoCapture cap;
 
@@ -185,15 +141,16 @@ int main(int argc, char** argv)
             break;
 //        idx2 = (last + 1) % N; // index of (last - (N-1))th frame
 //        last = idx2;
-        motion = image;
-        update_mhi( image_prev, image , motion, 30 );
+        image.copyTo(motion);
+        image.copyTo(output);
+        update_mhi( image_prev, image , motion, output, 30 );
 
 //        Mat i1, i2;
 //        cvtColor( image_prev, i1, CV_BGR2GRAY ); // convert frame to grayscale
 //        cvtColor( image, i2, CV_BGR2GRAY ); // convert frame to grayscale
 //        absdiff(i1,i2,motion);
         imshow("Motion", motion );
-        imshow( "Image", image );
+        imshow( "Image", output );
 
         if( cvWaitKey(30) >= 0 )
             break;
