@@ -30,9 +30,7 @@ const double MIN_TIME_DELTA = 0.05;
 // (should, probably, depend on FPS)
 const int N = 4;
 
-// ring image buffer
-vector<Mat> buf(N);
-int last = 0;
+
 
 // temporary images
 Mat mhi; // MHI
@@ -46,11 +44,10 @@ bool init = false;
 //  img - input video frame
 //  dst - resultant motion picture
 //  args - optional parameters
-static void  update_mhi( Mat &img, Mat &dst, int diff_threshold )
+static void  update_mhi( Mat &img1, Mat& img2, Mat &dst, int diff_threshold )
 {
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
 //    CvSize size = cvSize(img->width,img->height); // get current frame size
-    int i, idx1 = last, idx2;
     Mat silh;
     vector<CvRect> seq;
     CvRect comp_rect;
@@ -60,53 +57,14 @@ static void  update_mhi( Mat &img, Mat &dst, int diff_threshold )
     double magnitude;
     CvScalar color;
 
-    if( init == false ) {
+    Mat i1, i2;
+    cvtColor( img1, i1, CV_BGR2GRAY ); // convert frame to grayscale
+    cvtColor( img2, i2, CV_BGR2GRAY ); // convert frame to grayscale
 
-        cout << "here init" << endl;
-        buf =  vector<Mat>(N,Mat::zeros(img.rows,img.cols,CV_8U));
-        mhi.zeros(img.rows,img.cols,CV_8U);
-        init = true;
-//        orient.zeros()
-
-//        mhi = cvCreateImage( size, IPL_DEPTH_32F, 1 );
-//        cvZero( mhi ); // clear MHI at the beginning
-//        orient = cvCreateImage( size, IPL_DEPTH_32F, 1 );
-//        segmask = cvCreateImage( size, IPL_DEPTH_32F, 1 );
-//        mask = cvCreateImage( size, IPL_DEPTH_8U, 1 );
-    }
-
-    // put image inside the framebuffer
-
-    cvtColor( img, buf[last], CV_BGR2GRAY ); // convert frame to grayscale
-
-    cout << "write at "<< &buf[last] << endl;
-//    cout << "here cvtColor Done" << endl;
-    // update indices
-    idx2 = (last + 1) % N; // index of (last - (N-1))th frame
-    last = idx2;
-
-
-//    silh = buf[idx2];
-
-
-    Mat m1 = buf.at(idx1);
-    Mat m2 = buf.at(idx2);
-    cout << "test de comparaison " << idx1 << " " << idx2 << " " << &m1.data << " " << &m2.data << endl;
-    cout << &buf.at(0) << " " <<  &buf.at(1) << " " <<  &buf.at(2)<< " " <<  &buf.at(3) << endl;
-    for(uint i = 0; i < m1.rows ; i++){
-        for(uint j = 0; j < m1.cols ; j++){
-            if(m1.at<uchar>(i,j) - m2.at<uchar>(i,j) != 0 ){
-                cout << "not the same matrix" << endl;
-                break;
-            }
-        }
-    }
-//    cout << "same matrix !!!" << endl;
-
-    absdiff(buf.at(idx1), buf.at(idx2), silh ); // get difference between frames
+    absdiff(i1, i2, silh); // get difference between frames
 //    cout << "here absdiff Done  " << idx1 << " " << idx2 << " "  << last << endl;
     dst = silh;
-    threshold( silh, silh, diff_threshold, 1, CV_THRESH_BINARY ); // and threshold it
+//    threshold( silh, silh, diff_threshold, 1, CV_THRESH_BINARY ); // and threshold it
 //    cout << "here threshold Done" << endl;
 //    dst = silh;
 //    updateMotionHistory( silh, mhi, timestamp, MHI_DURATION ); // update MHI
@@ -189,7 +147,11 @@ static void  update_mhi( Mat &img, Mat &dst, int diff_threshold )
 
 int main(int argc, char** argv)
 {
-    Mat motion, image;
+    // ring image buffer
+//    vector<Mat> buf(N);
+//    int last = 0, idx1, idx2;
+    Mat motion, image, image_prev;
+    vector<Mat> buf(4);
     VideoCapture cap;
 
     help();
@@ -207,18 +169,29 @@ int main(int argc, char** argv)
 //    cvNamedWindow( "Motion", 1 );
     cvNamedWindow( "Image", 1 );
 
+    cap >> image_prev;
+
+
     for(;;)
     {
         cap >> image;
         if( image.empty() )
             break;
+//        idx2 = (last + 1) % N; // index of (last - (N-1))th frame
+//        last = idx2;
         motion = image;
-        update_mhi( image, motion, 30 );
+//        update_mhi( image_prev, image , motion, 30 );
+
+        Mat i1, i2;
+        cvtColor( image_prev, i1, CV_BGR2GRAY ); // convert frame to grayscale
+        cvtColor( image, i2, CV_BGR2GRAY ); // convert frame to grayscale
+        absdiff(i1,i2,motion);
         imshow("Motion", motion );
         imshow( "Image", image );
 
         if( cvWaitKey(30) >= 0 )
             break;
+        image.copyTo(image_prev);
     }
     cap.release();
 //    cvReleaseCapture( &capture );
