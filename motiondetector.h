@@ -8,6 +8,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include <iostream>
 
@@ -19,10 +20,11 @@ class MotionDetector
 public:
     MotionDetector(int buffer_depth = 4, double mhi_duration = 0.3,double max_time_delta= 0.2, double min_time_delta = 0.01);
 
-    vector<Rect> update(Mat &img, Mat &dst, int diff_threshold);
+    vector<Rect> update(Mat &img, int diff_threshold);
+    vector<Rect> compute(Mat &img1, Mat &img2, int diff_threshold);
 
-
-    vector<Rect> compute(Mat &img1, Mat &img2, Mat &dst, int diff_threshold);
+    Mat &getFirst();
+    Mat &getSecond();
 private:
     // various tracking parameters (in seconds)
     const double MHI_DURATION;// = 0.3;
@@ -35,6 +37,9 @@ private:
     // ring image buffer of size N
     vector<Mat> buffer;//(N);
     int last;// = 0;
+    int idx1, idx2;
+
+
 
     // temporary images
     Mat mhi; // MHI
@@ -42,8 +47,9 @@ private:
     Mat orient; // orientation
     Mat mask; // valid orientation mask
     Mat segmask; // motion segmentation map
+    Mat motion; // motion representation in blue image
 
-    vector<Rect> seq;
+    vector<Rect> roi;
 
 
     void resize_matrix(int rows, int cols);

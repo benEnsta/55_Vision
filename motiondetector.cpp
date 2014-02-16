@@ -27,27 +27,18 @@ void MotionDetector::resize_matrix(int rows, int cols ){
 
     }
     mhi  = Mat::zeros(rows,cols,CV_32FC1);
+
 }
 
-vector<Rect> MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
+vector<Rect> MotionDetector::compute(Mat &img1, Mat &img2, int diff_threshold){
 
-    int idx1 = last, idx2;
+    assert((img1.type() == CV_8UC1) && (img2.type() == CV_8UC1) );
+
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
+    vector<Rect> seq;
+    roi.clear();
 
-    CvScalar color;
-
-    seq.clear();
-    if(img.rows != mhi.rows || img.cols != mhi.cols)
-        resize_matrix(img.rows,img.cols);
-
-    // put image inside the framebuffer
-    cvtColor( img, buffer[last], CV_BGR2GRAY ); // convert frame to grayscale
-
-    // update indices
-    idx2 = (last + 1) % N; // index of (last - (N-1))th frame
-    last = idx2;
-
-    absdiff(buffer.at(idx1), buffer.at(idx2), silh ); // get difference between frames
+    absdiff(img1, img2, silh ); // get difference between frames
 
 
     threshold( silh, silh, diff_threshold, 1, CV_THRESH_BINARY ); // and threshold it
@@ -60,7 +51,7 @@ vector<Rect> MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
 
     vector<Mat> merge_vect(4,Mat::zeros(mask.rows, mask.cols,CV_8U));
     merge_vect[0] = mask;
-    cv::merge( merge_vect, dst );
+    cv::merge( merge_vect, motion );
 
     // calculate motion gradient orientation and valid orientation mask
     calcMotionGradient( mhi, mask, orient, MAX_TIME_DELTA, MIN_TIME_DELTA, 3 );
@@ -75,13 +66,41 @@ vector<Rect> MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
 
         if( comp_rect.width + comp_rect.height < 100 ) // reject very small components
             continue;
-        color = CV_RGB(255,0,0);
-        rectangle(img,comp_rect,color);
-        result.push_back(comp_rect);
+//        color = CV_RGB(255,0,0);
+//        rectangle(img,comp_rect,color);
+        roi.push_back(comp_rect);
     }
 
-    return result;
+    return roi;
+}
 
+Mat& MotionDetector::getFirst()
+{
+    return buffer[idx1];
+}
+
+Mat& MotionDetector::getSecond()
+{
+    return buffer[idx2];
+}
+
+
+vector<Rect> MotionDetector::update(Mat &img, int diff_threshold){
+
+    idx1 = last;
+
+    if(img.rows != mhi.rows || img.cols != mhi.cols)
+        resize_matrix(img.rows,img.cols);
+
+    // put image inside the framebuffer
+    cvtColor( img, buffer[last], CV_BGR2GRAY ); // convert frame to grayscale
+
+    // update indices
+    idx2 = (last + 1) % N; // index of (last - (N-1))th frame
+    last = idx2;
+
+
+    return compute(getFirst(),getSecond(),diff_threshold);
 
 
 }

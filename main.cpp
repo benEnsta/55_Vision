@@ -59,7 +59,14 @@ int main(int argc, char** argv)
         if( image.empty() )
             break;
         motion = image;
-        detector.update(image, motion, 30 );
+        vector<Rect> roi = detector.update(image, 30 );
+
+        for(uint i = 0; i < roi.size(); i++){
+            rectangle(image,roi[i],cvScalar(255,0,0));
+        }
+
+
+
         imshow("Motion", motion );
         imshow( "Image", image );
 
