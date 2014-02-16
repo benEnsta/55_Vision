@@ -29,7 +29,7 @@ void MotionDetector::resize_matrix(int rows, int cols ){
     mhi  = Mat::zeros(rows,cols,CV_32FC1);
 }
 
-void MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
+vector<Rect> MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
 
     int idx1 = last, idx2;
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
@@ -69,7 +69,7 @@ void MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
     // segment motion: get sequence of motion components
     // segmask is marked motion components map. It is not used further
     segmentMotion( mhi, segmask, seq, timestamp, MAX_TIME_DELTA );
-
+    vector<Rect> result;
     for(uint i = 0; i < seq.size(); i++ ){
         Rect comp_rect = seq.at(i);
 
@@ -77,7 +77,10 @@ void MotionDetector::update(Mat &img, Mat &dst, int diff_threshold){
             continue;
         color = CV_RGB(255,0,0);
         rectangle(img,comp_rect,color);
+        result.push_back(comp_rect);
     }
+
+    return result;
 
 
 

@@ -17,11 +17,12 @@ using namespace std;
 class MotionDetector
 {
 public:
-    MotionDetector(int buffer_depth = 3, double mhi_duration = 0.3,double max_time_delta= 0.2, double min_time_delta = 0.01);
+    MotionDetector(int buffer_depth = 4, double mhi_duration = 0.3,double max_time_delta= 0.2, double min_time_delta = 0.01);
 
-    void update(Mat &img, Mat &dst, int diff_threshold);
+    vector<Rect> update(Mat &img, Mat &dst, int diff_threshold);
 
 
+    vector<Rect> compute(Mat &img1, Mat &img2, Mat &dst, int diff_threshold);
 private:
     // various tracking parameters (in seconds)
     const double MHI_DURATION;// = 0.3;
