@@ -183,11 +183,15 @@ void extract_shape(Mat& img){
 
 }
 
-Point2f extract_shape2(Mat& src_gray){
+Moments extract_shape2(Mat& src_gray){
 
-    const int MAX_COUNT = 50;
+    const int MAX_COUNT = 15;
 
     vector<Point2f> points;
+    int dilation_size =1;
+    Mat element = getStructuringElement( MORPH_RECT,
+                                           Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                                           Point( -1, -1) );
 
 
     TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 20, 0.03);
@@ -197,7 +201,10 @@ Point2f extract_shape2(Mat& src_gray){
 //    cvtColor(img,src_gray,CV_BGR2GRAY);
 
 //    // automatic initialization
-    goodFeaturesToTrack(src_gray, points, MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
+    threshold( src_gray, src_gray, 0, 255, THRESH_OTSU);
+    morphologyEx(src_gray,src_gray,MORPH_GRADIENT,element,Point(-1,-1),1);
+    morphologyEx(src_gray,src_gray,MORPH_CLOSE,element,Point(-1,-1),1);
+//    goodFeaturesToTrack(src_gray, points, MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
 //    if(points.size() > 0)
 //        cornerSubPix(src_gray, points, subPixWinSize, Size(-1,-1), termcrit);
 
@@ -205,14 +212,14 @@ Point2f extract_shape2(Mat& src_gray){
     for( uint i = 0; i < points.size(); i++ )
     {
         //points[1][k++] = points[1][i];
-        circle( src_gray, points[i], 3, Scalar(255,255,0), -1, 8);
+//        circle( src_gray, points[i], 3, Scalar(255,255,0), -1, 8);
     }
 
 
 
 
     imshow("contour",src_gray);
-    return mc(points);
+    return moments(src_gray,true);
 
 }
 
@@ -257,7 +264,7 @@ int main(int argc, char** argv)
 
 
         vector<Rect> roi = detector.update(image, 30);
-        cout << roi.size() << endl;
+//        cout << roi.size() << endl;
 
         for(uint i = 0; i < roi.size(); i++){
             rectangle(image,roi[0],cvScalar(255,0,0));
@@ -274,10 +281,13 @@ int main(int argc, char** argv)
             cvtColor(image(roi[0]),img1,CV_BGR2GRAY);
 //            cout << img1.type() << " " << img2.type() << endl;
             Mat img3 = img1 & img2;
-            Rect rect = extract_shape2(img3);
-            rect.x += roi[0].x;
-            rect.y += roi[0].y;
-            rectangle(image,rect,cvScalar(0,0,255));
+            Moments mu = extract_shape2(img3);
+            Point2f center = Point2f( mu.m10/mu.m00 , mu.m01/mu.m00) + Point2f(roi[0].x, roi[0].y);
+            cout << center << " "<<roi[0] << " " << roi[0].contains(center) << endl;
+
+
+            circle(image,center,3,cvScalar(0,0,255),3);
+
 
         }
 
@@ -290,6 +300,7 @@ int main(int argc, char** argv)
         imshow("Motion", detector.getMotion() );
         imshow( "Image", image );
 
+//        cvWaitKey(0);
         if( cvWaitKey(30) >= 0 )
             break;
 
