@@ -71,6 +71,18 @@ vector<Rect> MotionDetector::compute(Mat &img1, Mat &img2, int diff_threshold){
         roi.push_back(comp_rect);
     }
 
+    for(uint i = 0; i < roi.size(); i++){
+        for(uint j = i+1; j < roi.size(); j++){
+            Rect tmp = roi[i] & roi[j];
+            if(tmp.area() > 0){
+                roi[i] |= roi[j];
+                roi[j] = roi[i];
+            }
+        }
+    }
+
+
+
     return roi;
 }
 
@@ -86,6 +98,11 @@ Mat& MotionDetector::getSecond()
 
 Mat& MotionDetector::getMotion(){
     return motion;
+}
+
+Mat &MotionDetector::getSilh()
+{
+    return this->silh1;
 }
 
 vector<Rect> MotionDetector::update(Mat &img, int diff_threshold){

@@ -1,7 +1,7 @@
-#include "mykalman.h"
+#include "detectedObject.h"
 
 
-myKalman::myKalman()
+detectedObject::detectedObject()
 {
     KalmanFilter KF(4, 2, 0);
     Mat_<float> state(4, 1); /* (x, y, Vx, Vy) */
@@ -13,7 +13,7 @@ myKalman::myKalman()
     measurements = measurement;
 }
 
-void myKalman::setKalman(float x, float y)
+void detectedObject::setKalman(float x, float y)
 {
     KFs.statePre.at<float>(0) = x;
     KFs.statePre.at<float>(1) = y;
@@ -29,21 +29,21 @@ void myKalman::setKalman(float x, float y)
 
 }
 
-Point myKalman::step1()
+Point detectedObject::step1()
 {
     Mat prediction = KFs.predict();
     Point predictPt(prediction.at<float>(0),prediction.at<float>(1));
     return predictPt;
 }
 
-Point myKalman::step2()
+Point detectedObject::step2()
 {
     Mat estimated = KFs.correct(measurements);
     Point statePt(estimated.at<float>(0),estimated.at<float>(1));
     return statePt;
 }
 
-void myKalman::changeMeasure(int x, int y)
+void detectedObject::changeMeasure(int x, int y)
 {
     measurements(0) = x;
     measurements(1) = y;

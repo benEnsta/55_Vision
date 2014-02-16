@@ -13,7 +13,7 @@
 #include <iostream>
 
 #include "motiondetector.h"
-#include "mykalman.h"
+#include "detectedObject.h"
 
 using namespace cv;
 using namespace std;
@@ -63,20 +63,34 @@ int test_detector(Mat &img1, Mat &img2){
 }
 
 
-Moments extract_shape2(Mat& src_gray){
+Moments extract_shape2(Mat &img, Mat& src_gray, Rect roi){
 
     const int MAX_COUNT = 15;
 
     vector<Point2f> points;
     int dilation_size =1;
-    Mat element = getStructuringElement( MORPH_RECT,
+    Mat element = getStructuringElement( MORPH_ELLIPSE,
                                          Size( 2*dilation_size + 1, 2*dilation_size+1 ),
                                          Point( -1, -1) );
     //    // automatic initialization
-    threshold( src_gray, src_gray, 0, 255, THRESH_OTSU);
-    morphologyEx(src_gray,src_gray,MORPH_GRADIENT,element,Point(-1,-1),1);
-    morphologyEx(src_gray,src_gray,MORPH_CLOSE,element,Point(-1,-1),1);
+//    threshold( src_gray, src_gray, 0, 255, THRESH_OTSU);
+//    morphologyEx(src_gray,src_gray,MORPH_GRADIENT,element,Point(-1,-1),1);
+//    morphologyEx(src_gray,src_gray,MORPH_CLOSE,element,Point(-1,-1),1);
 
+    vector<vector<Point> > contours;
+
+    vector<Vec4i> hierarchy;
+
+    findContours( src_gray, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(roi.x, roi.y) );
+
+    Rect box;
+    for(uint i = 0; i < contours.size(); i++){
+        if(i == 0)
+            box = boundingRect(contours[i]);
+        else
+            box |= boundingRect(contours[i]);
+    }
+    rectangle(img,box,cvScalar(0,255,0),2);
     imshow("contour",src_gray);
     return moments(src_gray,true);
 
@@ -93,7 +107,8 @@ int main(int argc, char** argv)
     Mat img1, img2;
 
 
-    myKalman KF;
+    vector<detectedObject> KFs;
+
 
 
     help();
@@ -115,7 +130,7 @@ int main(int argc, char** argv)
 
     bool detected = false;
 
-    KF.setKalman(0,0);
+    //    KF.setKalman(0,0);
     for(int ind = 0;;ind++)
     {
         Mat frame;
@@ -129,31 +144,39 @@ int main(int argc, char** argv)
         vector<Rect> roi = detector.update(image, 30);
 
         for(uint i = 0; i < roi.size(); i++){
-            rectangle(image,roi[0],cvScalar(255,0,0));
-        }
-        //        if(roi.size() > 0 && roi[0].width+roi[0].height < 500){
-        //            img1 = image(roi[0]);
-        //            img2 = image_prev(roi[0]);
-        //            test_detector(img1,img2);
-        //        }
+            if(roi[i].width+roi[i].height > 500)
+                continue;
 
-        Point pred = KF.step1();
-        circle(image,pred,3,cvScalar(255,0,0),3);
-        if(roi.size() > 0 && roi[0].width+roi[0].height < 500){
+            rectangle(image,roi[i],cvScalar(255,0,0));
 
-            cvtColor(detector.getMotion()(roi[0]),img2,CV_BGR2GRAY);
-            cvtColor(image(roi[0]),img1,CV_BGR2GRAY);
+            //            Point pred = KF.step1();
+
+//            circle(image,pred,3,cvScalar(255,0,0),3);
+
+            cvtColor(detector.getMotion()(roi[i]),img2,CV_BGR2GRAY);
+            cvtColor(image(roi[i]),img1,CV_BGR2GRAY);
             //            cout << img1.type() << " " << img2.type() << endl;
-            Mat img3 = img1 & img2;
-            Moments mu = extract_shape2(img3);
-            Point2f center = Point2f( mu.m10/mu.m00 , mu.m01/mu.m00) + Point2f(roi[0].x, roi[0].y);
-            cout << center << " "<<roi[0] << " " << roi[0].contains(center) << endl;
+            Mat img3 = detector.getSilh()(roi[i]);
+            cout << "extract_shape2 ";
+            Moments mu = extract_shape2(image, img3, roi[i]);
+
+            cout << "DONE" << endl;
+//            Point2f center = Point2f( mu.m10/mu.m00 , mu.m01/mu.m00) + Point2f(roi[i].x, roi[i].y);
+//            cout << center << " "<<roi[i] << " " << roi[i].contains(center) << endl;
+//            circle(image,center,3,cvScalar(0,0,255),3);
+
+//            cvWaitKey(0);
+//            KF.changeMeasure(center.x,center.y);
+//            Point corr = KF.step2();
+//            circle(image,corr,3,cvScalar(0,255,0),3);
+
+            //        if(roi.size() > 0 && roi[0].width+roi[0].height < 500){
+            //            img1 = image(roi[0]);
+            //            img2 = image_prev(roi[0]);
+            //            test_detector(img1,img2);
+            //        }
 
 
-            circle(image,center,3,cvScalar(0,0,255),3);
-            KF.changeMeasure(center.x,center.y);
-            Point corr = KF.step2();
-            circle(image,corr,3,cvScalar(0,255,0),3);
         }
 
 
@@ -164,7 +187,7 @@ int main(int argc, char** argv)
         imshow("Motion", detector.getMotion() );
         imshow( "Image", image );
 
-        //        cvWaitKey(0);
+//                cvWaitKey(0);
         if( cvWaitKey(30) >= 0 )
             break;
 
