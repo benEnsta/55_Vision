@@ -25,6 +25,7 @@ public:
 
     Mat &getFirst();
     Mat &getSecond();
+    Mat &getMotion();
 private:
     // various tracking parameters (in seconds)
     const double MHI_DURATION;// = 0.3;

@@ -84,6 +84,9 @@ Mat& MotionDetector::getSecond()
     return buffer[idx2];
 }
 
+Mat& MotionDetector::getMotion(){
+    return motion;
+}
 
 vector<Rect> MotionDetector::update(Mat &img, int diff_threshold){
 
