@@ -13,6 +13,7 @@
 #include <iostream>
 
 #include "motiondetector.h"
+#include "mykalman.h"
 
 using namespace cv;
 using namespace std;
@@ -69,9 +70,9 @@ Moments extract_shape2(Mat& src_gray){
     vector<Point2f> points;
     int dilation_size =1;
     Mat element = getStructuringElement( MORPH_RECT,
-                                           Size( 2*dilation_size + 1, 2*dilation_size+1 ),
-                                           Point( -1, -1) );
-//    // automatic initialization
+                                         Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                                         Point( -1, -1) );
+    //    // automatic initialization
     threshold( src_gray, src_gray, 0, 255, THRESH_OTSU);
     morphologyEx(src_gray,src_gray,MORPH_GRADIENT,element,Point(-1,-1),1);
     morphologyEx(src_gray,src_gray,MORPH_CLOSE,element,Point(-1,-1),1);
@@ -91,11 +92,8 @@ int main(int argc, char** argv)
     Mat gray, prevGray;
     Mat img1, img2;
 
-    // Kalman
-    KalmanFilter KF(4, 2, 0);
-    Mat_<float> state(4, 1); /* (x, y, Vx, Vy) */
-    Mat processNoise(4, 1, CV_32F);
-    Mat_<float> measurement(2,1); measurement.setTo(Scalar(0));
+
+    myKalman KF;
 
 
     help();
@@ -114,6 +112,10 @@ int main(int argc, char** argv)
     cvNamedWindow( "Image", 1 );
     cvNamedWindow("contour",0);
 
+
+    bool detected = false;
+
+    KF.setKalman(0,0);
     for(int ind = 0;;ind++)
     {
         Mat frame;
@@ -135,11 +137,13 @@ int main(int argc, char** argv)
         //            test_detector(img1,img2);
         //        }
 
+        Point pred = KF.step1();
+        circle(image,pred,3,cvScalar(255,0,0),3);
         if(roi.size() > 0 && roi[0].width+roi[0].height < 500){
 
             cvtColor(detector.getMotion()(roi[0]),img2,CV_BGR2GRAY);
             cvtColor(image(roi[0]),img1,CV_BGR2GRAY);
-//            cout << img1.type() << " " << img2.type() << endl;
+            //            cout << img1.type() << " " << img2.type() << endl;
             Mat img3 = img1 & img2;
             Moments mu = extract_shape2(img3);
             Point2f center = Point2f( mu.m10/mu.m00 , mu.m01/mu.m00) + Point2f(roi[0].x, roi[0].y);
@@ -147,16 +151,20 @@ int main(int argc, char** argv)
 
 
             circle(image,center,3,cvScalar(0,0,255),3);
-
-
+            KF.changeMeasure(center.x,center.y);
+            Point corr = KF.step2();
+            circle(image,corr,3,cvScalar(0,255,0),3);
         }
+
+
+
 
 
 
         imshow("Motion", detector.getMotion() );
         imshow( "Image", image );
 
-//        cvWaitKey(0);
+        //        cvWaitKey(0);
         if( cvWaitKey(30) >= 0 )
             break;
 
