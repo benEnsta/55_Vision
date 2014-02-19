@@ -4,7 +4,7 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-
+#include "opencv2/video/background_segm.hpp"
 #include <time.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -28,6 +28,7 @@ public:
     Mat& getMotion();
     Mat& getSilh();
 private:
+
     // various tracking parameters (in seconds)
     const double MHI_DURATION;// = 0.3;
     const double MAX_TIME_DELTA;// = 0.2;
@@ -50,6 +51,8 @@ private:
     Mat mask; // valid orientation mask
     Mat segmask; // motion segmentation map
     Mat motion; // motion representation in blue image
+    Mat back;   // Background image
+    Mat fore;   // Foregroung Image
 
     vector<Rect> roi;
 

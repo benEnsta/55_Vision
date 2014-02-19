@@ -36,7 +36,7 @@ vector<Rect> MotionDetector::compute(Mat &img1, Mat &img2, int diff_threshold){
 
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
     vector<Rect> seq;
-    roi.clear();
+
 
     absdiff(img1, img2, silh ); // get difference between frames
 
@@ -59,6 +59,7 @@ vector<Rect> MotionDetector::compute(Mat &img1, Mat &img2, int diff_threshold){
 
     // segment motion: get sequence of motion components
     // segmask is marked motion components map. It is not used further
+
     segmentMotion( mhi, segmask, seq, timestamp, MAX_TIME_DELTA );
     vector<Rect> result;
     for(uint i = 0; i < seq.size(); i++ ){
@@ -66,25 +67,35 @@ vector<Rect> MotionDetector::compute(Mat &img1, Mat &img2, int diff_threshold){
 
         if( comp_rect.width + comp_rect.height < 100 ) // reject very small components
             continue;
-//        color = CV_RGB(255,0,0);
-//        rectangle(img,comp_rect,color);
-        roi.push_back(comp_rect);
+        result.push_back(comp_rect);
     }
 
-    for(uint i = 0; i < roi.size(); i++){
-        for(uint j = i+1; j < roi.size(); j++){
-            Rect tmp = roi[i] & roi[j];
+    for(uint i = 0; i < result.size(); i++){
+        for(uint j = i+1; j < result.size(); j++){
+            Rect tmp = result[i] & result[j];
             if(tmp.area() > 0){
-                roi[i] |= roi[j];
-                roi[j] = roi[i];
+                result[i] |= result[j];
+                result[j] = result[i];
             }
         }
     }
 
-
+    // Mise à jour ROI list
+    roi.clear();
+    for(uint i = 0; i < result.size(); i++){
+        if(i == 0) roi.push_back(result[i]);
+        else{
+            for(uint j = 0; j < result.size(); j++){
+                if(roi[j] == result[i]) continue;
+            }
+            roi.push_back(result[i]);
+        }
+    }
 
     return roi;
 }
+
+
 
 Mat& MotionDetector::getFirst()
 {
@@ -120,7 +131,6 @@ vector<Rect> MotionDetector::update(Mat &img, int diff_threshold){
     last = idx2;
 
 
-    return compute(getFirst(),getSecond(),diff_threshold);
-
+   return compute(getFirst(),getSecond(),diff_threshold);
 
 }
