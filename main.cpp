@@ -136,6 +136,21 @@ vector<Rect> extractSubRegion(Mat& fore,vector<Rect> roi){
 }
 
 
+Mat image;
+void on_mouse(int event, int x, int y, int flags, void* param) {
+    static int i = 0;
+    if (event == CV_EVENT_LBUTTONUP)
+    {
+//        last_mouse = mouse_info;
+//        mouse_info.x = x;
+//        mouse_info.y = y;
+        circle(image,Point(x,y),3,cvScalar(255,0,0),2);
+        imshow("Image", image);
+        cout << "p_src[" << i << "] = Point2f(" << x << "," << y << ");" <<endl;
+        i++;
+    }
+}
+
 int main(int argc, char** argv)
 {
 
@@ -143,7 +158,7 @@ int main(int argc, char** argv)
     MotionDetector detector;
     BackgroundSubtractorMOG2 bg(100,-1,false);
 
-    Mat image_prev, image, frame;
+    Mat image_prev, frame;
     Mat gray, prevGray;
     Mat img1, img2;
     Mat back, fore;
@@ -154,6 +169,9 @@ int main(int argc, char** argv)
 
 
     help();
+
+
+
 
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         cap.open(argc == 2 ? argv[1][0] - '0' : 0);
@@ -167,9 +185,35 @@ int main(int argc, char** argv)
 
     cvNamedWindow( "Motion", 1 );
     cvNamedWindow( "Image", 1 );
+     setMouseCallback("Image", on_mouse, 0);
     cvNamedWindow("contour",0);
+    cvNamedWindow("perspective",0);
 
 
+    Point2f p_src[4];
+//    p_src[0] = Point2f(26,367);
+//    p_src[1] = Point2f(442,470);
+//    p_src[2] = Point2f(470,209);
+//    p_src[3] = Point2f(210,181);
+
+
+    p_src[0] = Point2f(24,367);
+    p_src[1] = Point2f(145,173);
+    p_src[2] = Point2f(552,164);
+    p_src[3] = Point2f(520,425);
+
+    double w = 30;
+
+
+    Point2f p_dst[4];
+    p_dst[0] = (Point2f(2*w,0));
+    p_dst[1] = (Point2f(0,7*w));
+    p_dst[2] = (Point2f(11*w,10*w));
+    p_dst[3] = (Point2f(10*w,1*w));
+
+
+    Mat M = getPerspectiveTransform(p_src, p_dst);
+    cout << M << endl;
     bool detected = false;
 
     //    KF.setKalman(0,0);
@@ -186,6 +230,10 @@ int main(int argc, char** argv)
         bg(image,fore);
         bg.getBackgroundImage(back);
 
+
+        Mat pers;// = Mat(300,300,image.type());
+        warpPerspective(image,pers,M,Size(11*w,11*w));
+        imshow("perspective",pers);
 
         vector<Rect> roi = detector.update(image, 30);
 
@@ -210,7 +258,7 @@ int main(int argc, char** argv)
         imshow("Motion", detector.getMotion() );
         imshow( "Image", image );
 
-        //                cvWaitKey(0);
+        cvWaitKey(0);
         if( cvWaitKey(30) >= 0 )
             break;
 
