@@ -23,10 +23,10 @@ public:
     vector<Rect> update(Mat &img, int diff_threshold);
     vector<Rect> compute(Mat &img1, Mat &img2, int diff_threshold);
 
-    Mat &getFirst();
-    Mat &getSecond();
-    Mat &getMotion();
-    Mat &getSilh();
+    Mat& getFirst();
+    Mat& getSecond();
+    Mat& getMotion();
+    Mat& getSilh();
 private:
     // various tracking parameters (in seconds)
     const double MHI_DURATION;// = 0.3;
