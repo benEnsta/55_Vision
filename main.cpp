@@ -101,7 +101,7 @@ Moments extract_shape2(Mat &img, Mat& src_gray, Rect roi){
 
 
 
-vector<Rect> extractSubRegion(Mat& fore,vector<Rect> roi){
+vector<Rect> extractSubRegion(Mat& fore,vector<Rect> &roi, vector<Point2f> &centre){
     Mat tmp;
     vector<Rect> roi_red;
     for(uint i = 0; i < roi.size(); i++){
@@ -130,7 +130,12 @@ vector<Rect> extractSubRegion(Mat& fore,vector<Rect> roi){
         }
         roi_red.push_back(box);
         imshow("contour",tmp);
+        Moments mu =  moments(tmp,true);
+        centre.push_back(Point2f( mu.m10/mu.m00 , mu.m01/mu.m00 )+Point2f(box.x,box.y ));
+
     }
+
+
 
     return roi_red;
 }
@@ -187,7 +192,7 @@ int main(int argc, char** argv)
     cvNamedWindow( "Image", 1 );
      setMouseCallback("Image", on_mouse, 0);
     cvNamedWindow("contour",0);
-    cvNamedWindow("perspective",0);
+    cvNamedWindow("perspective",1);
 
 
     Point2f p_src[4];
@@ -197,19 +202,31 @@ int main(int argc, char** argv)
 //    p_src[3] = Point2f(210,181);
 
 
-    p_src[0] = Point2f(24,367);
-    p_src[1] = Point2f(145,173);
-    p_src[2] = Point2f(552,164);
-    p_src[3] = Point2f(520,425);
+//    p_src[0] = Point2f(24,367);
+//    p_src[1] = Point2f(145,173);
+//    p_src[2] = Point2f(552,164);
+//    p_src[3] = Point2f(520,425);
+
+
+    p_src[0] = Point2f(74,401);
+    p_src[1] = Point2f(205,240);
+    p_src[2] = Point2f(477,270);
+    p_src[3] = Point2f(497,476);
+
 
     double w = 30;
 
 
     Point2f p_dst[4];
-    p_dst[0] = (Point2f(2*w,0));
-    p_dst[1] = (Point2f(0,7*w));
-    p_dst[2] = (Point2f(11*w,10*w));
-    p_dst[3] = (Point2f(10*w,1*w));
+//    p_dst[0] = (Point2f(2*w,0));
+//    p_dst[1] = (Point2f(0,7*w));
+//    p_dst[2] = (Point2f(11*w,10*w));
+//    p_dst[3] = (Point2f(10*w,1*w));
+
+    p_dst[0] = (Point2f(5*w,0*w));
+    p_dst[1] = (Point2f(5*w,6*w));
+    p_dst[2] = (Point2f(12*w,6*w));
+    p_dst[3] = (Point2f(12*w,0*w));
 
 
     Mat M = getPerspectiveTransform(p_src, p_dst);
@@ -226,40 +243,42 @@ int main(int argc, char** argv)
 
         frame.copyTo(image);
 
+
+        Mat pers = Mat(15*w,15*w,image.type());
+        warpPerspective(image,pers,M,Size(15*w,15*w),INTER_NEAREST);
+        flip(pers,pers,0);
+
+
         // Extract background/foregroung info
-        bg(image,fore);
+        bg(pers,fore);
         bg.getBackgroundImage(back);
 
 
-        Mat pers;// = Mat(300,300,image.type());
-        warpPerspective(image,pers,M,Size(11*w,11*w));
-        imshow("perspective",pers);
 
-        vector<Rect> roi = detector.update(image, 30);
 
-        vector<Rect> interret = extractSubRegion(fore,roi);
+
+
+        vector<Rect> roi = detector.update(pers, 30);
+        vector<Point2f> centre;
+        vector<Rect> interret = extractSubRegion(fore,roi,centre);
 
 
         for(uint i = 0; i < roi.size(); i++){
             if(roi[i].width+roi[i].height > 500)
                 continue;
-            rectangle(image,roi[i],cvScalar(255,0,0));
-            rectangle(image,interret[i],cvScalar(0,255,0));
-
+            rectangle(pers,roi[i],cvScalar(255,0,0));
+            rectangle(pers,interret[i],cvScalar(0,255,0));
+//            Point2f c =  Point2f(interret[i].x + interret[i].width*0.5, interret[i].y + interret[i].height);
+            circle(pers,centre[i],3,cvScalar(255,255,0),2);
 
         }
 
-
-
-
-
-
-
+        imshow("perspective",pers);
         imshow("Motion", detector.getMotion() );
         imshow( "Image", image );
 
-        cvWaitKey(0);
-        if( cvWaitKey(30) >= 0 )
+//        cvWaitKey(0);
+        if( cvWaitKey(10) >= 0 )
             break;
 
         image.copyTo(image_prev);
