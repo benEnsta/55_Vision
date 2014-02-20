@@ -33,6 +33,18 @@ static void help(void)
                 );
 }
 
+
+class Obj {
+public :
+    Obj(){};
+
+    Obj(Rect rect, Point2f pos): rect_curr(rect),rect_prev(rect),pos_curr(pos),pos_prev(pos){};
+    Rect rect_curr;
+    Rect rect_prev;
+    Point2f pos_curr;
+    Point2f pos_prev;
+};
+
 int test_detector(Mat &img1, Mat &img2){
     if(img1.empty() || img2.empty())
     {
@@ -173,74 +185,92 @@ Mat computePerspectiveTransform(Point2f *p_src, Point2f *p_dst){
     return getPerspectiveTransform(p_src, p_dst);
 }
 
-//int track_object(vector<detectedObject> &KFs, Rect roi, Point2f &centre){
-//    if(KFs.size() == 0){
-//        KFs.push_back(detectedObject());
-//        KFs[0].setKalman(0,0);
-////        obj.setKalman(0,0);
-//        KFs[0].changeMeasure(centre.x, centre.y);
-//        KFs[0].rect = roi;
-//        KFs[0].pos = centre;
-////        KFs.push_back( obj);
+
+
+int rect_intersect(vector<Rect> &rect_old, Rect &roi,vector<Point2f> &point_old, Point2f &centre){
+    double max_area = -1;
+    int idx= 0;
+    for(uint i = 0; i < rect_old.size(); i++){
+        Rect rect = roi & rect_old[i];
+        double area = rect.area();
+        cout << area << " " << roi << " " << rect_old[i] << endl;
+        if(max_area < area){
+            max_area = area;
+            idx = i;
+        }
+    }
+    if(max_area > -1)
+        return idx;
+    else
+        return -1;
+
+//    if(rect_old.size() == 0){
+//        rect_old.push_back(roi);
+//        point_old.push_back(centre);
 //    } else {
 //        double max_area = -1;
-//        int idx=0;
-//        cout << "KFs Size "<< KFs.size() << endl;
-//        for(uint i = 0; i < KFs.size(); i++){
-//            Rect rect = roi & KFs[i].rect;
-//            double area = (roi & KFs[i].rect).area();
-//            cout << area << " " << roi << " " << KFs[i].rect << endl;
+//        int idx= 0;
+//        cout << "KFs Size " << rect_old.size() << endl;
+//        for(uint i = 0; i < rect_old.size(); i++){
+//            Rect rect = roi & rect_old[i];
+//            double area = (roi & rect_old[i]).area();
+//            cout << area << " " << roi << " " << rect_old[i] << endl;
 //            if(max_area < area){
 //                max_area = area;
 //                idx = i;
 //            }
 //        }
-//        cout <<  max_area << "  " << idx << endl;
 //        if(max_area == -1){
 //            cout << "nouveau object"<< endl;
 //        } else {
-//            KFs[idx].old_pos = KFs[idx].pos;
-//            KFs[idx].pos = centre;
-//            KFs[idx].rect = roi;
-//            KFs[idx].changeMeasure(centre.x,centre.y);
+//            rect_old[idx] = roi;
+//            point_old[idx] = centre;
 //        }
 //    }
-//}
+}
 
-//int track_object(vector<detectedObject> &KFs, vector<Rect> &roi, vector<Point2f> &centre){
-
+//int track_object(vector<Obj> &object, Rect roi, Point2f centre){
+//    if(object.size() == 0){
+//        object.push_back(Obj(roi,centre));
+//        return -1;
+//    }
 //    double max_area = -1;
-//    int idx;
-
-//    if(KFs.size() == 0){
-//        for(uint i = 0; i < centre.size())
-//        detectedObject obj();
-//        obj.
-//        KFs.push_back( detectedObject());
-//    }
-
-//    for(uint i = 0; i < KFs.size(); i++){
-
-//        for(uint j = 0; j < roi.size(); j++ ){
-//            double area = (roi[j] & KFs[i].rect).area();
-//            if(max_area < area){
-//                max_area = area;
-//                idx = j;
-//            }
-
+//    int idx = 1;
+//    for(uint i = 0; i < object.size(); i++){
+//        Rect rect = object[i].rect_curr & roi;
+//        double area = rect.area();
+//        cout << area << " " << roi << " " << rect_old[i] << endl;
+//        if(max_area < area){
+//            max_area = area;
+//            idx = i;
 //        }
 
-//        if(max_area = -1){
-//            cout << "nouveau object"<< endl;
-//        } else {
-//            KFs[i].old_pos = KFs[i].pos;
-//            KFs[i].pos = centre[idx];
-//            KFs[i].rect = roi[idx];
-//        }
-
+//        if(max_area > -1)
+//            return idx;
+//        else
+//            return -1;
 //    }
 //}
 
+void drawRobot(Mat img, double x, double y , double theta){
+    vector<double> X, Y;
+    double f = 10;
+    X.push_back(0*f); Y.push_back(-1*f);
+    X.push_back(3*f); Y.push_back(0);
+    X.push_back(0*f); Y.push_back(1*f);
+    vector<Point> pts;
+    for (int k=0;k<X.size();k++)
+    {
+        double x1=x+cos(theta)*X[k]-sin(theta)*Y[k];
+        double y1=y+sin(theta)*X[k]+cos(theta)*Y[k];
+        pts.push_back(Point(x1,y1));
+    }
+    line(img,pts[0],pts[1],cvScalar(0,255,255),2);
+    line(img,pts[1],pts[2],cvScalar(0,255,255),2);
+    line(img,pts[2],pts[0],cvScalar(0,255,255),2);
+
+
+}
 
 int main(int argc, char** argv)
 {
@@ -255,7 +285,12 @@ int main(int argc, char** argv)
     Mat back, fore;
 
 
-    vector<detectedObject> KFs;
+    vector<Obj> object;
+    vector<Point2f> centre_old;
+    vector<Rect> rect_old;
+
+
+
 
     help();
 
@@ -287,6 +322,7 @@ int main(int argc, char** argv)
     {
         // Get image
         cap >> frame;
+        cap >> frame;
         if( frame.empty() )
             break;
 
@@ -311,7 +347,9 @@ int main(int argc, char** argv)
         for(uint i = 0; i < roi.size(); i++){
             if(roi[i].width+roi[i].height > 500)
                 continue;
-            track_object(KFs,roi[i],centre[i]);
+
+
+//            track_object(object,roi[i],centre[i]);
             // drawing part
             rectangle(pers,roi[i],cvScalar(255,0,0));
             rectangle(pers,interret[i],cvScalar(0,255,0));
@@ -320,6 +358,11 @@ int main(int argc, char** argv)
             sprintf(buf,"(%3.0f,%3.0f)",centre[i].x, centre[i].y);
             putText(pers, buf, centre[i], FONT_HERSHEY_SCRIPT_SIMPLEX, 0.8, cvScalar(255,0,0));
         }
+
+        drawRobot(pers, 100,200,M_PI);
+//        for(uint i = 0; i < rect_old.size(); i++){
+//            circle(pers,centre_old[i],10,cvScalar((100*i)%255,0,(100*i)%255),2);
+//        }
 
         imshow("perspective",pers);
         imshow("Motion", detector.getMotion() );
