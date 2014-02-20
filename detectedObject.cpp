@@ -24,7 +24,7 @@ void detectedObject::setKalman(float x, float y)
     setIdentity(KFs.measurementMatrix);
     setIdentity(KFs.processNoiseCov, Scalar::all(1e-2));
     setIdentity(KFs.measurementNoiseCov, Scalar::all(1e-3));
-    setIdentity(KFs.errorCovPost, Scalar::all(10));
+    setIdentity(KFs.errorCovPost, Scalar::all(1));
 
 
 }

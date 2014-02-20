@@ -17,7 +17,9 @@ public:
     Point step2();
     void changeMeasure(int x,int y);
 
-    Rect position;
+    Rect rect;
+    Point2f pos, old_pos;
+
 
 private:
     KalmanFilter KFs;

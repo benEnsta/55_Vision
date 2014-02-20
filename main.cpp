@@ -156,6 +156,92 @@ void on_mouse(int event, int x, int y, int flags, void* param) {
     }
 }
 
+Mat computePerspectiveTransform(Point2f *p_src, Point2f *p_dst){
+
+    double w = 30;
+
+    p_src[0] = Point2f(74,401);
+    p_src[1] = Point2f(205,240);
+    p_src[2] = Point2f(477,270);
+    p_src[3] = Point2f(497,476);
+
+    p_dst[0] = (Point2f(5*w,0*w));
+    p_dst[1] = (Point2f(5*w,6*w));
+    p_dst[2] = (Point2f(12*w,6*w));
+    p_dst[3] = (Point2f(12*w,0*w));
+
+    return getPerspectiveTransform(p_src, p_dst);
+}
+
+//int track_object(vector<detectedObject> &KFs, Rect roi, Point2f &centre){
+//    if(KFs.size() == 0){
+//        KFs.push_back(detectedObject());
+//        KFs[0].setKalman(0,0);
+////        obj.setKalman(0,0);
+//        KFs[0].changeMeasure(centre.x, centre.y);
+//        KFs[0].rect = roi;
+//        KFs[0].pos = centre;
+////        KFs.push_back( obj);
+//    } else {
+//        double max_area = -1;
+//        int idx=0;
+//        cout << "KFs Size "<< KFs.size() << endl;
+//        for(uint i = 0; i < KFs.size(); i++){
+//            Rect rect = roi & KFs[i].rect;
+//            double area = (roi & KFs[i].rect).area();
+//            cout << area << " " << roi << " " << KFs[i].rect << endl;
+//            if(max_area < area){
+//                max_area = area;
+//                idx = i;
+//            }
+//        }
+//        cout <<  max_area << "  " << idx << endl;
+//        if(max_area == -1){
+//            cout << "nouveau object"<< endl;
+//        } else {
+//            KFs[idx].old_pos = KFs[idx].pos;
+//            KFs[idx].pos = centre;
+//            KFs[idx].rect = roi;
+//            KFs[idx].changeMeasure(centre.x,centre.y);
+//        }
+//    }
+//}
+
+//int track_object(vector<detectedObject> &KFs, vector<Rect> &roi, vector<Point2f> &centre){
+
+//    double max_area = -1;
+//    int idx;
+
+//    if(KFs.size() == 0){
+//        for(uint i = 0; i < centre.size())
+//        detectedObject obj();
+//        obj.
+//        KFs.push_back( detectedObject());
+//    }
+
+//    for(uint i = 0; i < KFs.size(); i++){
+
+//        for(uint j = 0; j < roi.size(); j++ ){
+//            double area = (roi[j] & KFs[i].rect).area();
+//            if(max_area < area){
+//                max_area = area;
+//                idx = j;
+//            }
+
+//        }
+
+//        if(max_area = -1){
+//            cout << "nouveau object"<< endl;
+//        } else {
+//            KFs[i].old_pos = KFs[i].pos;
+//            KFs[i].pos = centre[idx];
+//            KFs[i].rect = roi[idx];
+//        }
+
+//    }
+//}
+
+
 int main(int argc, char** argv)
 {
 
@@ -171,12 +257,7 @@ int main(int argc, char** argv)
 
     vector<detectedObject> KFs;
 
-
-
     help();
-
-
-
 
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         cap.open(argc == 2 ? argv[1][0] - '0' : 0);
@@ -190,50 +271,18 @@ int main(int argc, char** argv)
 
     cvNamedWindow( "Motion", 1 );
     cvNamedWindow( "Image", 1 );
-     setMouseCallback("Image", on_mouse, 0);
+    setMouseCallback("Image", on_mouse, 0);
     cvNamedWindow("contour",0);
     cvNamedWindow("perspective",1);
 
+    for(uint i = 0; i <  350; i++)
+        cap >> frame;
 
     Point2f p_src[4];
-//    p_src[0] = Point2f(26,367);
-//    p_src[1] = Point2f(442,470);
-//    p_src[2] = Point2f(470,209);
-//    p_src[3] = Point2f(210,181);
-
-
-//    p_src[0] = Point2f(24,367);
-//    p_src[1] = Point2f(145,173);
-//    p_src[2] = Point2f(552,164);
-//    p_src[3] = Point2f(520,425);
-
-
-    p_src[0] = Point2f(74,401);
-    p_src[1] = Point2f(205,240);
-    p_src[2] = Point2f(477,270);
-    p_src[3] = Point2f(497,476);
-
+    Point2f p_dst[4];
+    Mat M = computePerspectiveTransform(p_src,p_dst);
 
     double w = 30;
-
-
-    Point2f p_dst[4];
-//    p_dst[0] = (Point2f(2*w,0));
-//    p_dst[1] = (Point2f(0,7*w));
-//    p_dst[2] = (Point2f(11*w,10*w));
-//    p_dst[3] = (Point2f(10*w,1*w));
-
-    p_dst[0] = (Point2f(5*w,0*w));
-    p_dst[1] = (Point2f(5*w,6*w));
-    p_dst[2] = (Point2f(12*w,6*w));
-    p_dst[3] = (Point2f(12*w,0*w));
-
-
-    Mat M = getPerspectiveTransform(p_src, p_dst);
-    cout << M << endl;
-    bool detected = false;
-
-    //    KF.setKalman(0,0);
     for(int ind = 0;;ind++)
     {
         // Get image
@@ -242,7 +291,6 @@ int main(int argc, char** argv)
             break;
 
         frame.copyTo(image);
-
 
         Mat pers = Mat(15*w,15*w,image.type());
         warpPerspective(image,pers,M,Size(15*w,15*w),INTER_NEAREST);
@@ -254,10 +302,7 @@ int main(int argc, char** argv)
         bg.getBackgroundImage(back);
 
 
-
-
-
-
+        // Extract shape
         vector<Rect> roi = detector.update(pers, 30);
         vector<Point2f> centre;
         vector<Rect> interret = extractSubRegion(fore,roi,centre);
@@ -266,11 +311,14 @@ int main(int argc, char** argv)
         for(uint i = 0; i < roi.size(); i++){
             if(roi[i].width+roi[i].height > 500)
                 continue;
+            track_object(KFs,roi[i],centre[i]);
+            // drawing part
             rectangle(pers,roi[i],cvScalar(255,0,0));
             rectangle(pers,interret[i],cvScalar(0,255,0));
-//            Point2f c =  Point2f(interret[i].x + interret[i].width*0.5, interret[i].y + interret[i].height);
             circle(pers,centre[i],3,cvScalar(255,255,0),2);
-
+            char buf[256];
+            sprintf(buf,"(%3.0f,%3.0f)",centre[i].x, centre[i].y);
+            putText(pers, buf, centre[i], FONT_HERSHEY_SCRIPT_SIMPLEX, 0.8, cvScalar(255,0,0));
         }
 
         imshow("perspective",pers);
@@ -283,7 +331,6 @@ int main(int argc, char** argv)
 
         image.copyTo(image_prev);
 
-
     }
     cap.release();
 
@@ -295,7 +342,80 @@ int main(int argc, char** argv)
     return 0;
 }
 
+//#include <stdio.h>
+//#include <errno.h>
+//#include <signal.h>
+//#include <string.h>
+//#include <stdlib.h>
+//#include <unistd.h>
+//#include <netdb.h>
+//#include <netinet/in.h>
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+//#include <arpa/inet.h>
 
+//#include <iostream>
+
+//#define SERVEURNAME "172.20.27.69" // adresse IP de mon serveur
+
+//int to_server_socket = -1;
+
+//int main ( int argc, char **argv )
+//{
+
+//    char *server_name = SERVEURNAME;
+//    struct sockaddr_in serverSockAddr;
+//    struct hostent *serverHostEnt;
+//    long hostAddr;
+//    long status;
+//    char buffer[512];
+
+//    bzero(&serverSockAddr,sizeof(serverSockAddr));
+//    hostAddr = inet_addr(SERVEURNAME);
+//    if ( (long)hostAddr != (long)-1)
+//        bcopy(&hostAddr,&serverSockAddr.sin_addr,sizeof(hostAddr));
+//    else
+//    {
+//        serverHostEnt = gethostbyname(SERVEURNAME);
+//        if (serverHostEnt == NULL)
+//        {
+//            printf("gethost rate\n");
+//            exit(0);
+//        }
+//        bcopy(serverHostEnt->h_addr,&serverSockAddr.sin_addr,serverHostEnt->h_length);
+//    }
+//    serverSockAddr.sin_port = htons(4200);
+//    serverSockAddr.sin_family = AF_INET;
+
+//    /* creation de la socket */
+//    if ( (to_server_socket = socket(AF_INET,SOCK_STREAM,0)) < 0)
+//    {
+//        printf("creation socket client ratee\n");
+//        exit(0);
+//    }
+//    /* requete de connexion */
+//    if(connect( to_server_socket,
+//                (struct sockaddr *)&serverSockAddr,
+//                sizeof(serverSockAddr)) < 0 )
+//    {
+//        printf("demande de connection ratee\n");
+//        exit(0);
+//    }
+//    /* envoie de donne et reception */
+//    std::cout << "write to socket " << std::endl;
+//    int test = 42;
+//    char buff[256];
+//    sprintf(buff,"%d",test);
+//    write(to_server_socket,&buff,strlen(buff));
+//    write(to_server_socket,&buff,strlen(buff));
+//    write(to_server_socket,&buff,strlen(buff));
+////    write(to_server_socket,&test,4);
+//    read(to_server_socket,buffer,512);
+////    printf(buffer);
+//    /* fermeture de la connection */
+//    shutdown(to_server_socket,2);
+//    close(to_server_socket);
+//}
 
 
 #ifdef _EiC
