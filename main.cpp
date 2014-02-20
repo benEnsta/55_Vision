@@ -18,6 +18,8 @@
 #include "motiondetector.h"
 #include "detectedObject.h"
 
+#include "jog.h"
+
 using namespace cv;
 using namespace std;
 
@@ -34,16 +36,6 @@ static void help(void)
 }
 
 
-class Obj {
-public :
-    Obj(){};
-
-    Obj(Rect rect, Point2f pos): rect_curr(rect),rect_prev(rect),pos_curr(pos),pos_prev(pos){};
-    Rect rect_curr;
-    Rect rect_prev;
-    Point2f pos_curr;
-    Point2f pos_prev;
-};
 
 int test_detector(Mat &img1, Mat &img2){
     if(img1.empty() || img2.empty())
@@ -186,72 +178,6 @@ Mat computePerspectiveTransform(Point2f *p_src, Point2f *p_dst){
 }
 
 
-
-int rect_intersect(vector<Rect> &rect_old, Rect &roi,vector<Point2f> &point_old, Point2f &centre){
-    double max_area = -1;
-    int idx= 0;
-    for(uint i = 0; i < rect_old.size(); i++){
-        Rect rect = roi & rect_old[i];
-        double area = rect.area();
-        cout << area << " " << roi << " " << rect_old[i] << endl;
-        if(max_area < area){
-            max_area = area;
-            idx = i;
-        }
-    }
-    if(max_area > -1)
-        return idx;
-    else
-        return -1;
-
-//    if(rect_old.size() == 0){
-//        rect_old.push_back(roi);
-//        point_old.push_back(centre);
-//    } else {
-//        double max_area = -1;
-//        int idx= 0;
-//        cout << "KFs Size " << rect_old.size() << endl;
-//        for(uint i = 0; i < rect_old.size(); i++){
-//            Rect rect = roi & rect_old[i];
-//            double area = (roi & rect_old[i]).area();
-//            cout << area << " " << roi << " " << rect_old[i] << endl;
-//            if(max_area < area){
-//                max_area = area;
-//                idx = i;
-//            }
-//        }
-//        if(max_area == -1){
-//            cout << "nouveau object"<< endl;
-//        } else {
-//            rect_old[idx] = roi;
-//            point_old[idx] = centre;
-//        }
-//    }
-}
-
-//int track_object(vector<Obj> &object, Rect roi, Point2f centre){
-//    if(object.size() == 0){
-//        object.push_back(Obj(roi,centre));
-//        return -1;
-//    }
-//    double max_area = -1;
-//    int idx = 1;
-//    for(uint i = 0; i < object.size(); i++){
-//        Rect rect = object[i].rect_curr & roi;
-//        double area = rect.area();
-//        cout << area << " " << roi << " " << rect_old[i] << endl;
-//        if(max_area < area){
-//            max_area = area;
-//            idx = i;
-//        }
-
-//        if(max_area > -1)
-//            return idx;
-//        else
-//            return -1;
-//    }
-//}
-
 void drawRobot(Mat img, double x, double y , double theta){
     vector<double> X, Y;
     double f = 10;
@@ -279,15 +205,11 @@ int main(int argc, char** argv)
     MotionDetector detector;
     BackgroundSubtractorMOG2 bg(100,-1,false);
 
-    Mat image_prev, frame;
-    Mat gray, prevGray;
-    Mat img1, img2;
+    Mat frame;
+
     Mat back, fore;
 
-
-    vector<Obj> object;
-    vector<Point2f> centre_old;
-    vector<Rect> rect_old;
+    jog jog;
 
 
 
@@ -310,8 +232,8 @@ int main(int argc, char** argv)
     cvNamedWindow("contour",0);
     cvNamedWindow("perspective",1);
 
-    for(uint i = 0; i <  350; i++)
-        cap >> frame;
+//    for(uint i = 0; i <  350; i++)
+//        cap >> frame;
 
     Point2f p_src[4];
     Point2f p_dst[4];
@@ -348,8 +270,8 @@ int main(int argc, char** argv)
             if(roi[i].width+roi[i].height > 500)
                 continue;
 
+            jog.cmd(centre[i].x, centre[i].y,0.05);
 
-//            track_object(object,roi[i],centre[i]);
             // drawing part
             rectangle(pers,roi[i],cvScalar(255,0,0));
             rectangle(pers,interret[i],cvScalar(0,255,0));
@@ -359,108 +281,23 @@ int main(int argc, char** argv)
             putText(pers, buf, centre[i], FONT_HERSHEY_SCRIPT_SIMPLEX, 0.8, cvScalar(255,0,0));
         }
 
-        drawRobot(pers, 100,200,M_PI);
-//        for(uint i = 0; i < rect_old.size(); i++){
-//            circle(pers,centre_old[i],10,cvScalar((100*i)%255,0,(100*i)%255),2);
-//        }
+        drawRobot(pers, jog.x,jog.y,jog.th);
+
 
         imshow("perspective",pers);
         imshow("Motion", detector.getMotion() );
         imshow( "Image", image );
 
-//        cvWaitKey(0);
         if( cvWaitKey(10) >= 0 )
             break;
-
-        image.copyTo(image_prev);
 
     }
     cap.release();
 
     cvDestroyWindow( "Motion" );
-    cvDestroyWindow( "Image" );
+    cvDestroyWindow( "Image"  );
 
 
 
     return 0;
 }
-
-//#include <stdio.h>
-//#include <errno.h>
-//#include <signal.h>
-//#include <string.h>
-//#include <stdlib.h>
-//#include <unistd.h>
-//#include <netdb.h>
-//#include <netinet/in.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <arpa/inet.h>
-
-//#include <iostream>
-
-//#define SERVEURNAME "172.20.27.69" // adresse IP de mon serveur
-
-//int to_server_socket = -1;
-
-//int main ( int argc, char **argv )
-//{
-
-//    char *server_name = SERVEURNAME;
-//    struct sockaddr_in serverSockAddr;
-//    struct hostent *serverHostEnt;
-//    long hostAddr;
-//    long status;
-//    char buffer[512];
-
-//    bzero(&serverSockAddr,sizeof(serverSockAddr));
-//    hostAddr = inet_addr(SERVEURNAME);
-//    if ( (long)hostAddr != (long)-1)
-//        bcopy(&hostAddr,&serverSockAddr.sin_addr,sizeof(hostAddr));
-//    else
-//    {
-//        serverHostEnt = gethostbyname(SERVEURNAME);
-//        if (serverHostEnt == NULL)
-//        {
-//            printf("gethost rate\n");
-//            exit(0);
-//        }
-//        bcopy(serverHostEnt->h_addr,&serverSockAddr.sin_addr,serverHostEnt->h_length);
-//    }
-//    serverSockAddr.sin_port = htons(4200);
-//    serverSockAddr.sin_family = AF_INET;
-
-//    /* creation de la socket */
-//    if ( (to_server_socket = socket(AF_INET,SOCK_STREAM,0)) < 0)
-//    {
-//        printf("creation socket client ratee\n");
-//        exit(0);
-//    }
-//    /* requete de connexion */
-//    if(connect( to_server_socket,
-//                (struct sockaddr *)&serverSockAddr,
-//                sizeof(serverSockAddr)) < 0 )
-//    {
-//        printf("demande de connection ratee\n");
-//        exit(0);
-//    }
-//    /* envoie de donne et reception */
-//    std::cout << "write to socket " << std::endl;
-//    int test = 42;
-//    char buff[256];
-//    sprintf(buff,"%d",test);
-//    write(to_server_socket,&buff,strlen(buff));
-//    write(to_server_socket,&buff,strlen(buff));
-//    write(to_server_socket,&buff,strlen(buff));
-////    write(to_server_socket,&test,4);
-//    read(to_server_socket,buffer,512);
-////    printf(buffer);
-//    /* fermeture de la connection */
-//    shutdown(to_server_socket,2);
-//    close(to_server_socket);
-//}
-
-
-#ifdef _EiC
-main(1,"motempl.c");
-#endif
